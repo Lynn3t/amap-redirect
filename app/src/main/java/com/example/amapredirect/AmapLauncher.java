@@ -62,7 +62,8 @@ public class AmapLauncher {
                 .scheme("amapuri")
                 .authority("poi")
                 .appendQueryParameter("sourceApplication", "AmapRedirect")
-                .appendQueryParameter("keyword", dest.name)
+                .appendQueryParameter("keywords", dest.name)
+                .appendQueryParameter("dev", "0")
                 .build();
     }
 

@@ -42,47 +42,28 @@ public class AmapLauncher {
     }
 
     private static Uri buildNavigationUri(IntentParser.Destination dest, String navMode) {
-        Uri.Builder builder = new Uri.Builder()
+        if (!dest.hasName()) return null;
+
+        return new Uri.Builder()
                 .scheme("amapuri")
                 .authority("route")
                 .appendPath("plan")
                 .appendQueryParameter("sourceApplication", "AmapRedirect")
-                .appendQueryParameter("t", navMode != null ? navMode : "0");
-
-        if (dest.hasName()) {
-            builder.appendQueryParameter("dname", dest.name);
-            builder.appendQueryParameter("dev", "0");
-        } else if (dest.hasCoordinates()) {
-            // Fallback: coordinates from Google's protobuf data (WGS-84)
-            builder.appendQueryParameter("dlat", dest.lat);
-            builder.appendQueryParameter("dlon", dest.lon);
-            builder.appendQueryParameter("dev", "1"); // WGS-84, Amap converts internally
-        } else {
-            return null;
-        }
-
-        return builder.build();
+                .appendQueryParameter("t", navMode != null ? navMode : "0")
+                .appendQueryParameter("dname", dest.name)
+                .appendQueryParameter("dev", "0")
+                .build();
     }
 
     private static Uri buildSearchUri(IntentParser.Destination dest) {
-        if (dest.hasName()) {
-            return new Uri.Builder()
-                    .scheme("amapuri")
-                    .authority("poi")
-                    .appendQueryParameter("sourceApplication", "AmapRedirect")
-                    .appendQueryParameter("keyword", dest.name)
-                    .build();
-        } else if (dest.hasCoordinates()) {
-            return new Uri.Builder()
-                    .scheme("amapuri")
-                    .authority("viewMap")
-                    .appendQueryParameter("sourceApplication", "AmapRedirect")
-                    .appendQueryParameter("lat", dest.lat)
-                    .appendQueryParameter("lon", dest.lon)
-                    .appendQueryParameter("dev", "1")
-                    .build();
-        }
-        return null;
+        if (!dest.hasName()) return null;
+
+        return new Uri.Builder()
+                .scheme("amapuri")
+                .authority("poi")
+                .appendQueryParameter("sourceApplication", "AmapRedirect")
+                .appendQueryParameter("keyword", dest.name)
+                .build();
     }
 
     private static boolean isAmapInstalled(Context context) {

@@ -2,7 +2,12 @@ package com.example.amapredirect;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.location.Address;
+import android.location.Geocoder;
 import android.net.Uri;
+
+import java.util.List;
+import java.util.Locale;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
@@ -76,13 +81,18 @@ public class MainHook implements IXposedHookLoadPackage {
         }
 
         IntentParser.Destination dest = IntentParser.parse(data);
+
+        // Fallback: extract coordinates and reverse-geocode to a name
+        if (dest == null || !dest.isValid()) {
+            dest = resolveFromCoordinates(activity, data);
+        }
+
         if (dest == null || !dest.isValid()) {
             XposedBridge.log(TAG + ": Could not parse destination");
             return false;
         }
 
-        String info = dest.hasName() ? dest.name : (dest.lat + "," + dest.lon);
-        XposedBridge.log(TAG + ": Redirecting: " + info);
+        XposedBridge.log(TAG + ": Redirecting: " + dest.name);
 
         String navMode = prefs.getString("nav_mode", "0");
 
@@ -94,5 +104,39 @@ public class MainHook implements IXposedHookLoadPackage {
         }
 
         return false;
+    }
+
+    /**
+     * Extracts coordinates from the URI and uses Android's Geocoder
+     * to reverse-geocode them into a place name.
+     */
+    private IntentParser.Destination resolveFromCoordinates(Activity activity, Uri data) {
+        double[] coords = IntentParser.extractCoordinates(data);
+        if (coords == null) return null;
+
+        double lat = coords[0];
+        double lon = coords[1];
+        XposedBridge.log(TAG + ": Found coordinates " + lat + "," + lon + ", reverse-geocoding…");
+
+        try {
+            Geocoder geocoder = new Geocoder(activity, Locale.getDefault());
+            List<Address> addresses = geocoder.getFromLocation(lat, lon, 1);
+            if (addresses != null && !addresses.isEmpty()) {
+                Address addr = addresses.get(0);
+                String name = addr.getAddressLine(0);
+                if (name != null && !name.trim().isEmpty()) {
+                    XposedBridge.log(TAG + ": Geocoded to: " + name);
+                    // Determine intent type based on original URI scheme
+                    IntentParser.IntentType type = "google.navigation".equals(data.getScheme())
+                            ? IntentParser.IntentType.NAVIGATION
+                            : IntentParser.IntentType.GEO_VIEW;
+                    return new IntentParser.Destination(type, name.trim());
+                }
+            }
+        } catch (Exception e) {
+            XposedBridge.log(TAG + ": Geocoder failed: " + e.getMessage());
+        }
+
+        return null;
     }
 }

@@ -21,10 +21,12 @@ public class AmapLauncher {
 
         Uri amapUri;
         if (dest.type == IntentParser.IntentType.NAVIGATION) {
-            amapUri = buildNavigationUri(dest.name, navMode);
+            amapUri = buildNavigationUri(dest, navMode);
         } else {
-            amapUri = buildSearchUri(dest.name);
+            amapUri = buildSearchUri(dest);
         }
+
+        if (amapUri == null) return false;
 
         Intent amapIntent = new Intent(Intent.ACTION_VIEW, amapUri);
         amapIntent.setPackage(AMAP_PACKAGE);
@@ -39,31 +41,48 @@ public class AmapLauncher {
         }
     }
 
-    /**
-     * amapuri://route/plan/?dname=Beijing+Airport&dev=0&t=0
-     */
-    private static Uri buildNavigationUri(String name, String navMode) {
-        return new Uri.Builder()
+    private static Uri buildNavigationUri(IntentParser.Destination dest, String navMode) {
+        Uri.Builder builder = new Uri.Builder()
                 .scheme("amapuri")
                 .authority("route")
                 .appendPath("plan")
                 .appendQueryParameter("sourceApplication", "AmapRedirect")
-                .appendQueryParameter("dname", name)
-                .appendQueryParameter("dev", "0")
-                .appendQueryParameter("t", navMode != null ? navMode : "0")
-                .build();
+                .appendQueryParameter("t", navMode != null ? navMode : "0");
+
+        if (dest.hasName()) {
+            builder.appendQueryParameter("dname", dest.name);
+            builder.appendQueryParameter("dev", "0");
+        } else if (dest.hasCoordinates()) {
+            // Fallback: coordinates from Google's protobuf data (WGS-84)
+            builder.appendQueryParameter("dlat", dest.lat);
+            builder.appendQueryParameter("dlon", dest.lon);
+            builder.appendQueryParameter("dev", "1"); // WGS-84, Amap converts internally
+        } else {
+            return null;
+        }
+
+        return builder.build();
     }
 
-    /**
-     * amapuri://poi?sourceApplication=AmapRedirect&keyword=Beijing+Airport
-     */
-    private static Uri buildSearchUri(String name) {
-        return new Uri.Builder()
-                .scheme("amapuri")
-                .authority("poi")
-                .appendQueryParameter("sourceApplication", "AmapRedirect")
-                .appendQueryParameter("keyword", name)
-                .build();
+    private static Uri buildSearchUri(IntentParser.Destination dest) {
+        if (dest.hasName()) {
+            return new Uri.Builder()
+                    .scheme("amapuri")
+                    .authority("poi")
+                    .appendQueryParameter("sourceApplication", "AmapRedirect")
+                    .appendQueryParameter("keyword", dest.name)
+                    .build();
+        } else if (dest.hasCoordinates()) {
+            return new Uri.Builder()
+                    .scheme("amapuri")
+                    .authority("viewMap")
+                    .appendQueryParameter("sourceApplication", "AmapRedirect")
+                    .appendQueryParameter("lat", dest.lat)
+                    .appendQueryParameter("lon", dest.lon)
+                    .appendQueryParameter("dev", "1")
+                    .build();
+        }
+        return null;
     }
 
     private static boolean isAmapInstalled(Context context) {

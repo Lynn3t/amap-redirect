@@ -27,15 +27,14 @@ public class MainHook implements IXposedHookLoadPackage {
         prefs = new XSharedPreferences("com.example.amapredirect", "settings");
         prefs.makeWorldReadable();
 
-        // Hook the general Activity class inside Google Maps process.
-        // This catches all activities (MapsActivity, NavigationActivity, etc.)
-        // that receive navigation/geo intents.
         XC_MethodHook intentHook = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                 Activity activity = (Activity) param.thisObject;
                 Intent intent = activity.getIntent();
-                handleIntent(activity, intent);
+                if (handleIntent(activity, intent)) {
+                    param.setResult(null); // prevent onCreate from running
+                }
             }
         };
 
@@ -48,42 +47,52 @@ public class MainHook implements IXposedHookLoadPackage {
             }
         };
 
-        // Hook Activity.onCreate and Activity.onNewIntent in the Maps process
         Class<?> activityClass = XposedHelpers.findClass("android.app.Activity", lpparam.classLoader);
         XposedBridge.hookAllMethods(activityClass, "onCreate", intentHook);
         XposedBridge.hookAllMethods(activityClass, "onNewIntent", newIntentHook);
     }
 
-    private void handleIntent(Activity activity, Intent intent) {
-        if (intent == null) return;
+    /**
+     * Returns true if the intent was intercepted and redirected to Amap.
+     */
+    private boolean handleIntent(Activity activity, Intent intent) {
+        if (intent == null) return false;
 
-        // Reload prefs to get latest settings
         prefs.reload();
-        if (!prefs.getBoolean("enable_redirect", true)) return;
+        if (!prefs.getBoolean("enable_redirect", true)) return false;
 
         Uri data = intent.getData();
-        if (data == null) return;
+        if (data == null) return false;
 
-        // Skip if this is an internal Google Maps intent (no external URI)
+        XposedBridge.log(TAG + ": Incoming URI: " + data.toString());
+
+        // Only intercept ACTION_VIEW or google.navigation scheme
         String action = intent.getAction();
         if (action == null || !Intent.ACTION_VIEW.equals(action)) {
-            // google.navigation intents may not have ACTION_VIEW, check scheme
             String scheme = data.getScheme();
             if (!"google.navigation".equals(scheme)) {
-                return;
+                return false;
             }
         }
 
         IntentParser.Destination dest = IntentParser.parse(data);
-        if (dest == null) return;
+        if (dest == null || !dest.isValid()) {
+            XposedBridge.log(TAG + ": Could not parse destination");
+            return false;
+        }
 
-        XposedBridge.log(TAG + ": Intercepted destination: " + dest.name);
+        String info = dest.hasName() ? dest.name : (dest.lat + "," + dest.lon);
+        XposedBridge.log(TAG + ": Redirecting: " + info);
 
         String navMode = prefs.getString("nav_mode", "0");
 
         if (AmapLauncher.launch(activity, dest, navMode)) {
-            // Kill Google Maps process so it doesn't linger in background
-            android.os.Process.killProcess(android.os.Process.myPid());
+            XposedBridge.log(TAG + ": Launched Amap, killing Maps");
+            activity.finishAffinity();
+            System.exit(0);
+            return true;
         }
+
+        return false;
     }
 }

@@ -23,7 +23,7 @@ public class IntentParser {
         }
 
         public boolean hasName() {
-            return !TextUtils.isEmpty(name);
+            return name != null && !name.trim().isEmpty();
         }
 
         public boolean isValid() {

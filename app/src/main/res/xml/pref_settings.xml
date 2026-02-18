@@ -15,4 +15,9 @@
         android:entryValues="@array/nav_mode_values"
         android:defaultValue="0" />
 
+    <Preference
+        android:key="view_log"
+        android:title="@string/pref_log_title"
+        android:summary="@string/pref_log_summary" />
+
 </PreferenceScreen>

@@ -9,6 +9,9 @@
     <string name="pref_nav_mode_title">Navigation mode</string>
     <string name="pref_nav_mode_summary">Default navigation mode in Amap</string>
 
+    <string name="pref_log_title">Redirect log</string>
+    <string name="pref_log_summary">View intercepted intent logs</string>
+
     <string name="toast_redirecting">Redirecting to Amap…</string>
     <string name="toast_amap_not_installed">Amap is not installed</string>
 

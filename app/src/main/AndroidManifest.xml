@@ -28,6 +28,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".LogActivity"
+            android:label="Redirect Log"
+            android:exported="false" />
+
     </application>
 
 </manifest>

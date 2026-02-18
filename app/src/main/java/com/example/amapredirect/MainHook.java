@@ -77,14 +77,13 @@ public class MainHook implements IXposedHookLoadPackage {
         IntentParser.Destination dest = IntentParser.parse(data);
         if (dest == null) return;
 
-        XposedBridge.log(TAG + ": Intercepted destination: "
-                + (dest.hasName() ? dest.name : dest.lat + "," + dest.lon));
+        XposedBridge.log(TAG + ": Intercepted destination: " + dest.name);
 
         String navMode = prefs.getString("nav_mode", "0");
 
         if (AmapLauncher.launch(activity, dest, navMode)) {
-            // Successfully launched Amap, finish the Google Maps activity
-            activity.finish();
+            // Kill Google Maps process so it doesn't linger in background
+            android.os.Process.killProcess(android.os.Process.myPid());
         }
     }
 }

@@ -7,18 +7,12 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.widget.Toast;
 
-/**
- * Builds and launches Amap intents from parsed destination info.
- */
 public class AmapLauncher {
 
     private static final String AMAP_PACKAGE = "com.autonavi.minimap";
 
-    /**
-     * Launch Amap with the given destination. Returns true if launched successfully.
-     */
     public static boolean launch(Activity activity, IntentParser.Destination dest, String navMode) {
-        if (dest == null) return false;
+        if (dest == null || !dest.isValid()) return false;
 
         if (!isAmapInstalled(activity)) {
             Toast.makeText(activity, "Amap is not installed", Toast.LENGTH_SHORT).show();
@@ -27,12 +21,10 @@ public class AmapLauncher {
 
         Uri amapUri;
         if (dest.type == IntentParser.IntentType.NAVIGATION) {
-            amapUri = buildNavigationUri(dest, navMode);
+            amapUri = buildNavigationUri(dest.name, navMode);
         } else {
-            amapUri = buildGeoViewUri(dest);
+            amapUri = buildSearchUri(dest.name);
         }
-
-        if (amapUri == null) return false;
 
         Intent amapIntent = new Intent(Intent.ACTION_VIEW, amapUri);
         amapIntent.setPackage(AMAP_PACKAGE);
@@ -48,63 +40,30 @@ public class AmapLauncher {
     }
 
     /**
-     * Build navigation URI for Amap.
-     * amapuri://route/plan/?dname=...&dev=0&t=mode
-     * amapuri://route/plan/?dlat=...&dlon=...&dev=1&t=mode
+     * amapuri://route/plan/?dname=Beijing+Airport&dev=0&t=0
      */
-    private static Uri buildNavigationUri(IntentParser.Destination dest, String navMode) {
-        Uri.Builder builder = new Uri.Builder()
+    private static Uri buildNavigationUri(String name, String navMode) {
+        return new Uri.Builder()
                 .scheme("amapuri")
                 .authority("route")
                 .appendPath("plan")
                 .appendQueryParameter("sourceApplication", "AmapRedirect")
-                .appendQueryParameter("t", navMode != null ? navMode : "0");
-
-        if (dest.hasName()) {
-            builder.appendQueryParameter("dname", dest.name);
-            // If we also have coordinates, include them
-            if (dest.hasCoordinates()) {
-                builder.appendQueryParameter("dlat", dest.lat);
-                builder.appendQueryParameter("dlon", dest.lon);
-                builder.appendQueryParameter("dev", "1"); // WGS-84
-            } else {
-                builder.appendQueryParameter("dev", "0");
-            }
-        } else if (dest.hasCoordinates()) {
-            builder.appendQueryParameter("dlat", dest.lat);
-            builder.appendQueryParameter("dlon", dest.lon);
-            builder.appendQueryParameter("dev", "1"); // WGS-84
-        } else {
-            return null;
-        }
-
-        return builder.build();
+                .appendQueryParameter("dname", name)
+                .appendQueryParameter("dev", "0")
+                .appendQueryParameter("t", navMode != null ? navMode : "0")
+                .build();
     }
 
     /**
-     * Build geo view URI for Amap.
-     * amapuri://poi?keyword=...
-     * amapuri://viewMap?sourceApplication=...&lat=...&lon=...&dev=1
+     * amapuri://poi?sourceApplication=AmapRedirect&keyword=Beijing+Airport
      */
-    private static Uri buildGeoViewUri(IntentParser.Destination dest) {
-        if (dest.hasName()) {
-            return new Uri.Builder()
-                    .scheme("amapuri")
-                    .authority("poi")
-                    .appendQueryParameter("sourceApplication", "AmapRedirect")
-                    .appendQueryParameter("keyword", dest.name)
-                    .build();
-        } else if (dest.hasCoordinates()) {
-            return new Uri.Builder()
-                    .scheme("amapuri")
-                    .authority("viewMap")
-                    .appendQueryParameter("sourceApplication", "AmapRedirect")
-                    .appendQueryParameter("lat", dest.lat)
-                    .appendQueryParameter("lon", dest.lon)
-                    .appendQueryParameter("dev", "1") // WGS-84
-                    .build();
-        }
-        return null;
+    private static Uri buildSearchUri(String name) {
+        return new Uri.Builder()
+                .scheme("amapuri")
+                .authority("poi")
+                .appendQueryParameter("sourceApplication", "AmapRedirect")
+                .appendQueryParameter("keyword", name)
+                .build();
     }
 
     private static boolean isAmapInstalled(Context context) {

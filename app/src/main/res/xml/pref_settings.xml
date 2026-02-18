@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <SwitchPreference
+        android:key="enable_redirect"
+        android:title="@string/pref_enable_title"
+        android:summary="@string/pref_enable_summary"
+        android:defaultValue="true" />
+
+    <ListPreference
+        android:key="nav_mode"
+        android:title="@string/pref_nav_mode_title"
+        android:summary="@string/pref_nav_mode_summary"
+        android:entries="@array/nav_mode_entries"
+        android:entryValues="@array/nav_mode_values"
+        android:defaultValue="0" />
+
+</PreferenceScreen>

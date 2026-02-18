@@ -52,6 +52,11 @@ public class AmapLauncher {
         if (dest.hasName()) {
             builder.appendQueryParameter("dname", dest.name);
             builder.appendQueryParameter("dev", "0");
+        } else if (dest.hasCoordinates()) {
+            // Fallback: coordinates from Google's protobuf data (WGS-84)
+            builder.appendQueryParameter("dlat", dest.lat);
+            builder.appendQueryParameter("dlon", dest.lon);
+            builder.appendQueryParameter("dev", "1"); // WGS-84, Amap converts internally
         } else {
             return null;
         }
@@ -66,6 +71,15 @@ public class AmapLauncher {
                     .authority("poi")
                     .appendQueryParameter("sourceApplication", "AmapRedirect")
                     .appendQueryParameter("keyword", dest.name)
+                    .build();
+        } else if (dest.hasCoordinates()) {
+            return new Uri.Builder()
+                    .scheme("amapuri")
+                    .authority("viewMap")
+                    .appendQueryParameter("sourceApplication", "AmapRedirect")
+                    .appendQueryParameter("lat", dest.lat)
+                    .appendQueryParameter("lon", dest.lon)
+                    .appendQueryParameter("dev", "1")
                     .build();
         }
         return null;

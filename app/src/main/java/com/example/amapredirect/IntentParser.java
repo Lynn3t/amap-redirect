@@ -35,7 +35,7 @@ public class IntentParser {
         }
 
         public boolean isValid() {
-            return hasName();
+            return hasName() || hasCoordinates();
         }
     }
 
